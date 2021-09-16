@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import javax.persistence.EntityGraph;
@@ -38,6 +39,7 @@ import org.mockito.quality.Strictness;
 
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.sample.User;
 import org.springframework.data.jpa.repository.EntityGraph.EntityGraphType;
 import org.springframework.data.repository.CrudRepository;
@@ -193,5 +195,4 @@ class SimpleJpaRepositoryUnitTests {
 		verify(em, never()).remove(newUser);
 		verify(em, never()).merge(newUser);
 	}
-
 }
