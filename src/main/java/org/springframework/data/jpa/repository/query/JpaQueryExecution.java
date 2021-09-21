@@ -34,7 +34,7 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.data.jpa.provider.PersistenceProvider;
 import org.springframework.data.repository.core.support.SurroundingTransactionDetectorMethodInterceptor;
-import org.springframework.data.repository.support.PageableExecutionUtils;
+import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.data.util.CloseableIterator;
 import org.springframework.data.util.StreamUtils;
 import org.springframework.lang.Nullable;
