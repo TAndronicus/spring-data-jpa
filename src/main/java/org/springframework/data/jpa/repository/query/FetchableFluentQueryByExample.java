@@ -18,15 +18,20 @@ package org.springframework.data.jpa.repository.query;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.persistence.TypedQuery;
 
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.mapping.PersistentEntity;
+import org.springframework.data.mapping.PersistentProperty;
+import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.repository.query.FluentQuery.FetchableFluentQuery;
 import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.lang.Nullable;
@@ -49,15 +54,17 @@ public class FetchableFluentQueryByExample<S, R> extends FluentQuerySupport<R> i
 	private Function<Example<S>, Boolean> existsOperation;
 
 	public FetchableFluentQueryByExample(Example<S> example, Class<R> resultType, Function<Sort, TypedQuery<S>> finder,
-			Function<Example<S>, Long> countOperation, Function<Example<S>, Boolean> existsOperation) {
-		this(example, resultType, Sort.unsorted(), null, finder, countOperation, existsOperation);
+			Function<Example<S>, Long> countOperation, Function<Example<S>, Boolean> existsOperation,
+			MappingContext<? extends PersistentEntity<?, ?>, ? extends PersistentProperty<?>> context) {
+		this(example, resultType, Sort.unsorted(), null, finder, countOperation, existsOperation, context);
 	}
 
 	private FetchableFluentQueryByExample(Example<S> example, Class<R> resultType, Sort sort,
 			@Nullable Collection<String> properties, Function<Sort, TypedQuery<S>> finder,
-			Function<Example<S>, Long> countOperation, Function<Example<S>, Boolean> existsOperation) {
+			Function<Example<S>, Long> countOperation, Function<Example<S>, Boolean> existsOperation,
+			MappingContext<? extends PersistentEntity<?, ?>, ? extends PersistentProperty<?>> context) {
 
-		super(resultType, sort, properties);
+		super(resultType, sort, properties, context);
 		this.example = example;
 		this.finder = finder;
 		this.countOperation = countOperation;
@@ -68,26 +75,33 @@ public class FetchableFluentQueryByExample<S, R> extends FluentQuerySupport<R> i
 	public FetchableFluentQuery<R> sortBy(Sort sort) {
 
 		return new FetchableFluentQueryByExample<>(this.example, this.resultType, this.sort.and(sort), this.properties,
-				this.finder, this.countOperation, this.existsOperation);
+				this.finder, this.countOperation, this.existsOperation, this.context);
 	}
 
 	@Override
 	public <NR> FetchableFluentQuery<NR> as(Class<NR> resultType) {
 
 		return new FetchableFluentQueryByExample<>(this.example, resultType, this.sort, this.properties, this.finder,
-				this.countOperation, this.existsOperation);
+				this.countOperation, this.existsOperation, this.context);
 	}
 
 	@Override
 	public FetchableFluentQuery<R> project(Collection<String> properties) {
 
 		return new FetchableFluentQueryByExample<>(this.example, this.resultType, this.sort, mergeProperties(properties),
-				this.finder, this.countOperation, this.existsOperation);
+				this.finder, this.countOperation, this.existsOperation, this.context);
 	}
 
 	@Override
 	public R oneValue() {
-		return firstValue();
+
+		List<R> all = all();
+
+		if (all.size() > 1) {
+			throw new IncorrectResultSizeDataAccessException(1);
+		}
+
+		return all.isEmpty() ? null : all.get(0);
 	}
 
 	@Override
@@ -99,7 +113,7 @@ public class FetchableFluentQueryByExample<S, R> extends FluentQuerySupport<R> i
 
 	@Override
 	public List<R> all() {
-		return (List<R>) this.finder.apply(this.sort).getResultList();
+		return stream().collect(Collectors.toList());
 	}
 
 	@Override
@@ -109,7 +123,10 @@ public class FetchableFluentQueryByExample<S, R> extends FluentQuerySupport<R> i
 
 	@Override
 	public Stream<R> stream() {
-		return all().stream();
+
+		return this.finder.apply(this.sort) //
+				.getResultStream() //
+				.map(getConversionFunction(this.example.getProbeType(), this.resultType));
 	}
 
 	@Override
@@ -124,14 +141,17 @@ public class FetchableFluentQueryByExample<S, R> extends FluentQuerySupport<R> i
 
 	private Page<R> readPage(Pageable pageable) {
 
-		TypedQuery<S> query = this.finder.apply(this.sort);
+		TypedQuery<S> pagedQuery = this.finder.apply(this.sort);
 
 		if (pageable.isPaged()) {
-			query.setFirstResult((int) pageable.getOffset());
-			query.setMaxResults(pageable.getPageSize());
+			pagedQuery.setFirstResult((int) pageable.getOffset());
+			pagedQuery.setMaxResults(pageable.getPageSize());
 		}
 
-		return (Page<R>) PageableExecutionUtils.getPage(query.getResultList(), pageable,
-				() -> this.countOperation.apply(this.example));
+		List<R> paginatedResults = pagedQuery.getResultStream() //
+				.map(getConversionFunction(this.example.getProbeType(), this.resultType)) //
+				.collect(Collectors.toList());
+
+		return PageableExecutionUtils.getPage(paginatedResults, pageable, () -> this.countOperation.apply(this.example));
 	}
 }

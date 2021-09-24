@@ -32,7 +32,6 @@ import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
@@ -368,10 +367,8 @@ class QuerydslJpaPredicateExecutorUnitTests {
 	@Test // GH-2294
 	void findByFluentPredicateOneValue() {
 
-		User firstUser = predicateExecutor.findBy(user.firstname.contains("v"),
-				q -> q.sortBy(Sort.by("firstname")).oneValue());
-
-		assertThat(firstUser).isEqualTo(dave);
+		assertThatExceptionOfType(IncorrectResultSizeDataAccessException.class).isThrownBy(
+				() -> predicateExecutor.findBy(user.firstname.contains("v"), q -> q.sortBy(Sort.by("firstname")).oneValue()));
 	}
 
 	@Test // GH-2294
@@ -416,22 +413,30 @@ class QuerydslJpaPredicateExecutorUnitTests {
 		assertThat(exists).isTrue();
 	}
 
-	@Disabled // pending SD Commons update to Projections support
 	@Test // GH-2294
-	void findByFluentPredicateWithProjection() {
+	void findByFluentPredicateWithClassBasedProjection() {
 
-		List<UserProjection> userProjections = predicateExecutor.findBy(user.firstname.eq("Dave"),
-				q -> q.as(UserProjection.class).project("firstname", "lastname").all());
+		List<UserProjectionClassBased> userProjections = predicateExecutor.findBy(user.firstname.eq("Dave"),
+				q -> q.as(UserProjectionClassBased.class).project("firstname", "lastname").all());
 
-		UserProjection projection = new UserProjection(dave);
+		UserProjectionClassBased projection = new UserProjectionClassBased(dave);
 
 		assertThat(userProjections).containsExactly(projection);
+	}
+
+	@Test // GH-2294
+	void findByFluentPredicateWithInterfaceBasedProjection() {
+
+		List<UserProjectionInterfaceBased> userProjections = predicateExecutor.findBy(user.firstname.eq("Dave"),
+				q -> q.as(UserProjectionInterfaceBased.class).project("firstname", "lastname").all());
+
+		assertThat(userProjections).extracting(UserProjectionInterfaceBased::getFirstname).containsExactly("Dave");
 	}
 
 	@Data
 	@NoArgsConstructor
 	@AllArgsConstructor
-	private static class UserProjection {
+	public static class UserProjectionClassBased {
 
 		@Getter(AccessLevel.NONE) private User user;
 
@@ -446,5 +451,9 @@ class QuerydslJpaPredicateExecutorUnitTests {
 		public String getLastname() {
 			return this.user.getLastname();
 		}
+	}
+
+	private interface UserProjectionInterfaceBased {
+		String getFirstname();
 	}
 }

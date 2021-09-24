@@ -15,6 +15,7 @@
  */
 package org.springframework.data.jpa.repository.support;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -27,6 +28,7 @@ import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.query.FetchableFluentQueryByPredicate;
 import org.springframework.data.querydsl.EntityPathResolver;
@@ -197,7 +199,9 @@ public class QuerydslJpaPredicateExecutor<T> implements QuerydslPredicateExecuto
 		Function<Predicate, Boolean> existsOperation = p -> exists(predicate);
 
 		FetchableFluentQuery<S> fluentQuery = (FetchableFluentQuery<S>) new FetchableFluentQueryByPredicate<>(predicate,
-				entityInformation.getJavaType(), finder, pagedFinder, countOperation, existsOperation);
+				entityInformation.getJavaType(), finder, pagedFinder, countOperation, existsOperation,
+				this.entityInformation.getJavaType(),
+				new JpaMetamodelMappingContext(Collections.singleton(this.entityManager.getMetamodel())));
 
 		return queryFunction.apply(fluentQuery);
 

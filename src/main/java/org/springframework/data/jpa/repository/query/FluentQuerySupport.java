@@ -19,12 +19,18 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Function;
 
 import org.springframework.data.domain.Sort;
+import org.springframework.data.mapping.PersistentEntity;
+import org.springframework.data.mapping.PersistentProperty;
+import org.springframework.data.mapping.context.MappingContext;
+import org.springframework.data.mapping.model.EntityInstantiators;
+import org.springframework.data.projection.SpelAwareProxyProjectionFactory;
 import org.springframework.lang.Nullable;
 
 /**
- * Supporting class containing some state and convenience methods for building fluent queries.
+ * Supporting class containing some state and convenience methods for building and executing fluent queries.
  *
  * @param <R> The resulting type of the query.
  * @author Greg Turnquist
@@ -36,8 +42,13 @@ abstract class FluentQuerySupport<R> {
 	protected Class<R> resultType;
 	protected Sort sort;
 	@Nullable protected Set<String> properties;
+	protected MappingContext<? extends PersistentEntity<?, ?>, ? extends PersistentProperty<?>> context;
 
-	FluentQuerySupport(Class<R> resultType, Sort sort, @Nullable Collection<String> properties) {
+	private final SpelAwareProxyProjectionFactory projectionFactory = new SpelAwareProxyProjectionFactory();
+	private final EntityInstantiators entityInstantiators = new EntityInstantiators();
+
+	FluentQuerySupport(Class<R> resultType, Sort sort, @Nullable Collection<String> properties,
+			MappingContext<? extends PersistentEntity<?, ?>, ? extends PersistentProperty<?>> context) {
 
 		this.resultType = resultType;
 		this.sort = sort;
@@ -47,6 +58,8 @@ abstract class FluentQuerySupport<R> {
 		} else {
 			this.properties = null;
 		}
+
+		this.context = context;
 	}
 
 	final Collection<String> mergeProperties(Collection<String> additionalProperties) {
@@ -57,5 +70,21 @@ abstract class FluentQuerySupport<R> {
 		}
 		newProperties.addAll(additionalProperties);
 		return Collections.unmodifiableCollection(newProperties);
+	}
+
+	@SuppressWarnings("unchecked")
+	final <S> Function<Object, R> getConversionFunction(Class<S> inputType, Class<R> targetType) {
+
+		if (targetType.isAssignableFrom(inputType)) {
+			return (Function<Object, R>) Function.identity();
+		}
+
+		if (targetType.isInterface()) {
+			return o -> projectionFactory.createProjection(targetType, o);
+		}
+
+		DtoInstantiatingConverter converter = new DtoInstantiatingConverter(targetType, this.context, entityInstantiators);
+
+		return o -> (R) converter.convert(o);
 	}
 }

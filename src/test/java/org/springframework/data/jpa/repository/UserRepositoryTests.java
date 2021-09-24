@@ -2158,7 +2158,6 @@ public class UserRepositoryTests {
 		assertThat(exists).isTrue();
 	}
 
-	@Disabled // pending SD Commons update to Projections support
 	@Test // GH-2294
 	void findByFluentExampleWithProjection() {
 

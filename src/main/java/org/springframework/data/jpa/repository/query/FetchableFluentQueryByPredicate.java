@@ -19,12 +19,17 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.mapping.PersistentEntity;
+import org.springframework.data.mapping.PersistentProperty;
+import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.repository.query.FluentQuery.FetchableFluentQuery;
 import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.lang.Nullable;
@@ -49,50 +54,63 @@ public class FetchableFluentQueryByPredicate<S, R> extends FluentQuerySupport<R>
 	private BiFunction<Sort, Pageable, JPQLQuery<S>> pagedFinder;
 	private Function<Predicate, Long> countOperation;
 	private Function<Predicate, Boolean> existsOperation;
+	private Class<S> entityType;
 
 	public FetchableFluentQueryByPredicate(Predicate predicate, Class<R> resultType, Function<Sort, JPQLQuery<S>> finder,
 			BiFunction<Sort, Pageable, JPQLQuery<S>> pagedFinder, Function<Predicate, Long> countOperation,
-			Function<Predicate, Boolean> existsOperation) {
-		this(predicate, resultType, Sort.unsorted(), null, finder, pagedFinder, countOperation, existsOperation);
+			Function<Predicate, Boolean> existsOperation, Class<S> entityType,
+			MappingContext<? extends PersistentEntity<?, ?>, ? extends PersistentProperty<?>> context) {
+		this(predicate, resultType, Sort.unsorted(), null, finder, pagedFinder, countOperation, existsOperation, entityType,
+				context);
 	}
 
 	private FetchableFluentQueryByPredicate(Predicate predicate, Class<R> resultType, Sort sort,
 			@Nullable Collection<String> properties, Function<Sort, JPQLQuery<S>> finder,
 			BiFunction<Sort, Pageable, JPQLQuery<S>> pagedFinder, Function<Predicate, Long> countOperation,
-			Function<Predicate, Boolean> existsOperation) {
+			Function<Predicate, Boolean> existsOperation, Class<S> entityType,
+			MappingContext<? extends PersistentEntity<?, ?>, ? extends PersistentProperty<?>> context) {
 
-		super(resultType, sort, properties);
+		super(resultType, sort, properties, context);
 		this.predicate = predicate;
 		this.finder = finder;
 		this.pagedFinder = pagedFinder;
 		this.countOperation = countOperation;
 		this.existsOperation = existsOperation;
+		this.entityType = entityType;
 	}
 
 	@Override
 	public FetchableFluentQuery<R> sortBy(Sort sort) {
 
 		return new FetchableFluentQueryByPredicate<>(this.predicate, this.resultType, this.sort.and(sort), this.properties,
-				this.finder, this.pagedFinder, this.countOperation, this.existsOperation);
+				this.finder, this.pagedFinder, this.countOperation, this.existsOperation, this.entityType, this.context);
 	}
 
 	@Override
 	public <NR> FetchableFluentQuery<NR> as(Class<NR> resultType) {
 
 		return new FetchableFluentQueryByPredicate<>(this.predicate, resultType, this.sort, this.properties, this.finder,
-				this.pagedFinder, this.countOperation, this.existsOperation);
+				this.pagedFinder, this.countOperation, this.existsOperation, this.entityType, this.context);
 	}
 
 	@Override
 	public FetchableFluentQuery<R> project(Collection<String> properties) {
 
 		return new FetchableFluentQueryByPredicate<>(this.predicate, this.resultType, this.sort,
-				mergeProperties(properties), this.finder, this.pagedFinder, this.countOperation, this.existsOperation);
+				mergeProperties(properties), this.finder, this.pagedFinder, this.countOperation, this.existsOperation,
+				this.entityType, this.context);
 	}
 
 	@Override
 	public R oneValue() {
-		return firstValue();
+
+		List<R> all = all();
+
+		if (all.size() > 1) {
+			throw new IncorrectResultSizeDataAccessException(1);
+		}
+
+		return all.isEmpty() ? null : all.get(0);
 	}
 
 	@Override
@@ -104,7 +122,7 @@ public class FetchableFluentQueryByPredicate<S, R> extends FluentQuerySupport<R>
 
 	@Override
 	public List<R> all() {
-		return (List<R>) this.finder.apply(this.sort).fetchResults().getResults();
+		return stream().collect(Collectors.toList());
 	}
 
 	@Override
@@ -114,7 +132,10 @@ public class FetchableFluentQueryByPredicate<S, R> extends FluentQuerySupport<R>
 
 	@Override
 	public Stream<R> stream() {
-		return all().stream();
+
+		return this.finder.apply(this.sort) //
+				.stream() //
+				.map(getConversionFunction(this.entityType, this.resultType));
 	}
 
 	@Override
@@ -129,9 +150,12 @@ public class FetchableFluentQueryByPredicate<S, R> extends FluentQuerySupport<R>
 
 	private Page<R> readPage(Pageable pageable) {
 
-		JPQLQuery<S> query = this.pagedFinder.apply(this.sort, pageable);
+		JPQLQuery<S> pagedQuery = this.pagedFinder.apply(this.sort, pageable);
 
-		return (Page<R>) PageableExecutionUtils.getPage(query.fetchResults().getResults(), pageable,
-				() -> this.countOperation.apply(this.predicate));
+		List<R> paginatedResults = pagedQuery.stream() //
+				.map(getConversionFunction(this.entityType, this.resultType)) //
+				.collect(Collectors.toList());
+
+		return PageableExecutionUtils.getPage(paginatedResults, pageable, () -> this.countOperation.apply(this.predicate));
 	}
 }
