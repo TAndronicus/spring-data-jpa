@@ -20,8 +20,8 @@ import static org.assertj.core.api.Assertions.*;
 import java.sql.Date;
 import java.util.List;
 
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
