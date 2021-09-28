@@ -95,73 +95,6 @@
 			</repositories>
 		</profile>
 
-		<profile>
-			<id>docs</id>
-
-			<build>
-				<plugins>
-					<plugin>
-						<artifactId>maven-antrun-plugin</artifactId>
-						<version>1.8</version>
-						<executions>
-							<execution>
-								<id>copy-schemas</id>
-								<phase>prepare-package</phase>
-								<goals>
-									<goal>run</goal>
-								</goals>
-								<configuration>
-									<target>
-										<copy todir="${project.build.directory}/site/schemas">
-											<fileset dir="${project.build.directory}/schemas"/>
-										</copy>
-									</target>
-								</configuration>
-							</execution>
-							<execution>
-								<id>package-and-attach-docs-zip</id>
-								<phase>package</phase>
-								<goals>
-									<goal>run</goal>
-								</goals>
-								<configuration>
-									<tasks>
-										<zip destfile="${project.build.directory}/${project.artifactId}-${project.version}.zip">
-											<fileset dir="${project.build.directory}/site"/>
-										</zip>
-									</tasks>
-								</configuration>
-							</execution>
-						</executions>
-					</plugin>
-
-					<plugin>
-						<groupId>org.codehaus.mojo</groupId>
-						<artifactId>build-helper-maven-plugin</artifactId>
-						<version>1.10</version>
-						<executions>
-							<execution>
-								<id>attach-zip</id>
-								<goals>
-									<goal>attach-artifact</goal>
-								</goals>
-								<phase>package</phase>
-								<configuration>
-									<artifacts>
-										<artifact>
-											<file>
-												${project.build.directory}/${project.artifactId}-${project.version}.zip
-											</file>
-											<type>zip</type>
-										</artifact>
-									</artifacts>
-								</configuration>
-							</execution>
-						</executions>
-					</plugin>
-				</plugins>
-			</build>
-		</profile>
 	</profiles>
 
 	<dependencyManagement>
@@ -179,27 +112,6 @@
 
 	<build>
 		<plugins>
-
-			<!--
-			     Jacoco plugin redeclared to make sure it's downloaded and
-			     the agents can be explicitly added to the test executions.
-			-->
-			<plugin>
-				<groupId>org.jacoco</groupId>
-				<artifactId>jacoco-maven-plugin</artifactId>
-				<version>${jacoco}</version>
-				<configuration>
-					<destFile>${jacoco.destfile}</destFile>
-				</configuration>
-				<executions>
-					<execution>
-						<id>jacoco-initialize</id>
-						<goals>
-							<goal>prepare-agent</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
 
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
