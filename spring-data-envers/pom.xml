@@ -48,7 +48,7 @@
 	</scm>
 
 	<properties>
-		<hibernate.envers>5.5.3.Final</hibernate.envers>
+		<hibernate.envers>5.5.7.Final</hibernate.envers>
 		<java-module-name>spring.data.envers</java-module-name>
 	</properties>
 
@@ -63,22 +63,24 @@
 		<!-- Hibernate -->
 		<dependency>
 			<groupId>org.hibernate</groupId>
-			<artifactId>hibernate-envers</artifactId>
+			<artifactId>hibernate-envers-jakarta</artifactId>
 			<version>${hibernate.envers}</version>
 		</dependency>
 
 		<!-- QueryDsl -->
-		<dependency>
-			<groupId>com.querydsl</groupId>
-			<artifactId>querydsl-apt</artifactId>
-			<version>${querydsl}</version>
-			<scope>provided</scope>
-		</dependency>
+<!--		<dependency>-->
+<!--			<groupId>com.querydsl</groupId>-->
+<!--			<artifactId>querydsl-apt</artifactId>-->
+<!--			<version>${querydsl}</version>-->
+<!--			<classifier>jakarta</classifier>-->
+<!--			<scope>provided</scope>-->
+<!--		</dependency>-->
 
 		<dependency>
 			<groupId>com.querydsl</groupId>
 			<artifactId>querydsl-jpa</artifactId>
 			<version>${querydsl}</version>
+			<classifier>jakarta</classifier>
 			<optional>true</optional>
 		</dependency>
 

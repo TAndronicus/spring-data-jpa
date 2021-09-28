@@ -17,7 +17,7 @@ package org.springframework.data.envers.repository.support;
 
 import java.util.Optional;
 
-import javax.persistence.EntityManager;
+import jakarta.persistence.EntityManager;
 
 import org.hibernate.envers.DefaultRevisionEntity;
 import org.springframework.beans.factory.FactoryBean;
@@ -60,7 +60,7 @@ public class EnversRevisionRepositoryFactoryBean<T extends RevisionRepository<S,
 
 	/*
 	 * (non-Javadoc)
-	 * @see org.springframework.data.jpa.repository.support.JpaRepositoryFactoryBean#createRepositoryFactory(javax.persistence.EntityManager)
+	 * @see org.springframework.data.jpa.repository.support.JpaRepositoryFactoryBean#createRepositoryFactory(jakarta.persistence.EntityManager)
 	 */
 	@Override
 	protected RepositoryFactorySupport createRepositoryFactory(EntityManager entityManager) {

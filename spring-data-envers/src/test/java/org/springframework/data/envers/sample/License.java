@@ -17,9 +17,9 @@ package org.springframework.data.envers.sample;
 
 import java.util.Set;
 
-import javax.persistence.Entity;
-import javax.persistence.ManyToMany;
-import javax.persistence.Version;
+import jakarta.persistence.Entity;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.Version;
 
 import org.hibernate.envers.Audited;
 

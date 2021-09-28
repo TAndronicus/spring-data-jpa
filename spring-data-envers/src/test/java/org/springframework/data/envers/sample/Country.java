@@ -15,7 +15,7 @@
  */
 package org.springframework.data.envers.sample;
 
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 
 import lombok.ToString;
 import org.hibernate.envers.Audited;
